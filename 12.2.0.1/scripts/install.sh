@@ -34,10 +34,13 @@ echo "export PATH=\$PATH:\$ORACLE_HOME/bin" >> /home/oracle/.bashrc
 echo 'INSTALLER: Environment variables set'
 
 # install Oracle
-unzip /vagrant/linux*122*.zip -d /vagrant
+echo 'INSTALLER: Unpacking Oracle Installer'
+unzip -q /vagrant/linux*122*.zip -d /vagrant
+echo 'INSTALLER: Creating Oracle install response file'
 cp /vagrant/ora-response/db_install.rsp.tmpl /vagrant/ora-response/db_install.rsp
 sed -i -e "s|###ORACLE_BASE###|$ORACLE_BASE|g" /vagrant/ora-response/db_install.rsp && \
 sed -i -e "s|###ORACLE_HOME###|$ORACLE_HOME|g" /vagrant/ora-response/db_install.rsp && \
+echo 'INSTALLER: Running Oracle installation'
 su -l oracle -c "yes | /vagrant/database/runInstaller -silent -showProgress -ignorePrereq -waitforcompletion -responseFile /vagrant/ora-response/db_install.rsp"
 $ORACLE_BASE/oraInventory/orainstRoot.sh
 $ORACLE_HOME/root.sh
@@ -51,15 +54,31 @@ su -l oracle -c "netca -silent -responseFile /vagrant/ora-response/netca.rsp"
 echo 'INSTALLER: Listener created'
 
 # create database
+echo 'INSTALLER: Creating database creation response file'
 cp /vagrant/ora-response/dbca.rsp.tmpl /vagrant/ora-response/dbca.rsp
 sed -i -e "s|###ORACLE_SID###|$ORACLE_SID|g" /vagrant/ora-response/dbca.rsp && \
 sed -i -e "s|###ORACLE_PDB###|$ORACLE_PDB|g" /vagrant/ora-response/dbca.rsp && \
 sed -i -e "s|###ORACLE_CHARACTERSET###|$ORACLE_CHARACTERSET|g" /vagrant/ora-response/dbca.rsp
+echo 'INSTALLER: Running database creation'
 su -l oracle -c "dbca -silent -createDatabase -responseFile /vagrant/ora-response/dbca.rsp"
+
+echo 'INSTALLER: Running database post-creation tasks'
 su -l oracle -c "sqlplus / as sysdba <<EOF
-   ALTER PLUGGABLE DATABASE $ORACLE_PDB SAVE STATE;
-   exit;
+   ALTER SYSTEM SET max_string_size=extended scope=spfile;
+   SHUTDOWN IMMEDIATE;
+   STARTUP UPGRADE;
+   EXIT;
 EOF"
+
+su -l oracle -c "cd $ORACLE_HOME/rdbms/admin/ && $ORACLE_HOME/perl/bin/perl catcon.pl -d ${ORACLE_HOME}/rdbms/admin -l /tmp -b utl32k_output utl32k.sql"
+su -l oracle -c "cd $ORACLE_HOME/rdbms/admin/ && $ORACLE_HOME/perl/bin/perl catcon.pl -d ${ORACLE_HOME}/rdbms/admin -l /tmp -b utlrp_output utlrp.sql"
+
+su -l oracle -c "sqlplus / as sysdba <<EOF
+   SHUTDOWN IMMEDIATE;
+   STARTUP;
+   EXIT;
+EOF"
+
 rm /vagrant/ora-response/dbca.rsp
 
 echo 'INSTALLER: Database created'

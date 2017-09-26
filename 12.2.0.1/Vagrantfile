@@ -5,10 +5,23 @@
 VAGRANTFILE_API_VERSION = "2"
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
-  config.vm.box = "http://yum.oracle.com/boxes/oraclelinux/ol73/ol73.box"
-  
+  # config.vm.box = "http://yum.oracle.com/boxes/oraclelinux/ol73/ol73.box"
+  config.vm.box = "oraclelinux/ol73"
+  config.vm.box_url = "http://yum.oracle.com/boxes/oraclelinux/ol73/ol73.box"
   config.vm.box_check_update = false
-  
+
+  if Vagrant.has_plugin?('vagrant-cachier')
+    config.cache.scope = :box
+  else
+    puts "vagrant-cachier plugin not installed"
+  end
+
+  if Vagrant.has_plugin?('vagrant-timezone')
+    config.timezone.value = "America/New_York"
+  else
+    puts "vagrant-timezone plugin not installed"
+  end
+
   # change memory size
   config.vm.provider "virtualbox" do |v|
     v.memory = 2048
