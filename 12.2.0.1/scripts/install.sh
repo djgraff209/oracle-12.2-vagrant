@@ -67,15 +67,18 @@ su -l oracle -c "sqlplus / as sysdba <<EOF
    ALTER SYSTEM SET max_string_size=extended scope=spfile;
    SHUTDOWN IMMEDIATE;
    STARTUP UPGRADE;
+   ALTER PLUGGABLE DATABASE ALL OPEN UPGRADE;
    EXIT;
 EOF"
 
 su -l oracle -c "cd $ORACLE_HOME/rdbms/admin/ && $ORACLE_HOME/perl/bin/perl catcon.pl -d ${ORACLE_HOME}/rdbms/admin -l /tmp -b utl32k_output utl32k.sql"
-su -l oracle -c "cd $ORACLE_HOME/rdbms/admin/ && $ORACLE_HOME/perl/bin/perl catcon.pl -d ${ORACLE_HOME}/rdbms/admin -l /tmp -b utlrp_output utlrp.sql"
+# su -l oracle -c "cd $ORACLE_HOME/rdbms/admin/ && $ORACLE_HOME/perl/bin/perl catcon.pl -d ${ORACLE_HOME}/rdbms/admin -l /tmp -b utlrp_output utlrp.sql"
 
 su -l oracle -c "sqlplus / as sysdba <<EOF
    SHUTDOWN IMMEDIATE;
    STARTUP;
+   ALTER PLUGGABLE DATABASE ALL OPEN;
+   ALTER PLUGGABLE DATABASE $ORACLE_PDB SAVE STATE;
    EXIT;
 EOF"
 
